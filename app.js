@@ -17,7 +17,7 @@ function launchBot() {
     host: 'delhi-7684.indernos.in', 
     port: 25565,                    
     username: 'IndernosBypasser',   
-    version: '1.21.1',              
+    version: '1.21.11',              
     auth: 'offline'                 
   });
 
