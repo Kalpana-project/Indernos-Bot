@@ -16,10 +16,10 @@ app.listen(port, () => {
 // 2. CHAT AND NETWORK PACKET BINDING MATRIX
 function launchBot() {
   const bot = mineflayer.createBot({
-    host: 'delhi-7684.indernos.in', 
+    host: 'delhi-5009.indernos.in', 
     port: 25565,                    
-    username: 'IndernosBot',   
-    version: '1.21.11',              
+    username: 'Propalyer',   
+    version: '26.1.12',              
     auth: 'offline'                 
   });
 
