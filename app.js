@@ -15,11 +15,11 @@ app.listen(port, () => {
 
 // 2. CHAT AND NETWORK PACKET BINDING MATRIX
 function launchBot() {
-  const serverHost = process.env.MC_HOST || 'delhi-7684.indernos.in';
-  const serverPort = parseInt(process.env.MC_PORT) || 25565;
-  const botUsername = process.env.MC_USERNAME || 'IndernosBot';
-
-  console.log(`[INIT] Launching bot "${botUsername}" targeting ${serverHost}:${serverPort}...`);
+  // --- YOUR HARDCODED RAW SERVER DETAILS ---
+  const serverHost = 'delhi-5009.indernos.in';
+  const serverPort = 25565;
+  const botUsername = 'IndernosBot'; 
+  console.log(`[INIT] Launching bot "${botUsername}" targeting raw IP ${serverHost}:${serverPort}...`);
 
   const bot = mineflayer.createBot({
     host: serverHost, 
@@ -27,12 +27,11 @@ function launchBot() {
     username: botUsername,   
     auth: 'offline',
     
-    // --- FORCE 26.1.2 VIA PROTOCOL OVERRIDE ---
-    // Tells the inner node-minecraft-protocol to bypass string parsing
+    // --- FORCE CODEBASE VIA PROTOCOL OVERRIDE ---
     version: false, 
-    protocolVersion: 775, // The exact internal protocol ID for the 26.1.x codebase
+    protocolVersion: 775, // Standard override for the modern protocol structure
     
-    // --- RAM OPTIMIZATIONS FOR RENDER ---
+    // --- RAM OPTIMIZATIONS FOR RENDER'S 512MB LIMIT ---
     viewDistance: 'tiny', 
     physicsEnabled: false 
   });
