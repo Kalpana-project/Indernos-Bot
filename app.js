@@ -15,42 +15,54 @@ app.listen(port, () => {
 
 // 2. CHAT AND NETWORK PACKET BINDING MATRIX
 function launchBot() {
+  const serverHost = process.env.MC_HOST || 'delhi-7684.indernos.in';
+  const serverPort = parseInt(process.env.MC_PORT) || 25565;
+  const botUsername = process.env.MC_USERNAME || 'IndernosBot';
+
+  console.log(`[INIT] Launching bot "${botUsername}" targeting ${serverHost}:${serverPort}...`);
+
   const bot = mineflayer.createBot({
-    host: 'delhi-5009.indernos.in', 
-    port: 25565,                    
-    username: 'Propalyer',   
-    version: '26.1.12',              
-    auth: 'offline'                 
+    host: serverHost, 
+    port: serverPort,                    
+    username: botUsername,   
+    auth: 'offline',
+    
+    // --- FORCE 26.1.2 VIA PROTOCOL OVERRIDE ---
+    // Tells the inner node-minecraft-protocol to bypass string parsing
+    version: false, 
+    protocolVersion: 775, // The exact internal protocol ID for the 26.1.x codebase
+    
+    // --- RAM OPTIMIZATIONS FOR RENDER ---
+    viewDistance: 'tiny', 
+    physicsEnabled: false 
+  });
+
+  // Disable physics/tracking entirely on spawn to prevent Out of Memory crashes
+  bot.on('spawn', () => {
+    console.log('[SPAWN] Bot entered world successfully. Network modules hooked.');
+    if (bot.physics) bot.physics.enabled = false;
   });
 
   // TARGETS SYSTEM PACKETS DIRECTLY TO CAPTURE CLICK ACTIONS
   bot._client.on('systemChat', (packet) => {
     try {
-      // Decode the raw JSON string component map sent by the hosting dashboard
       const rawJson = packet.content || packet.message;
       if (!rawJson) return;
 
       const messageText = JSON.stringify(rawJson).toLowerCase();
 
-      // Look for the paying user priority system message fingerprint
       if (messageText.includes('paying user') || messageText.includes('imhere-')) {
-        
-        // Isolate the exact dynamic hash token using custom tracking regex
         const tokenMatch = messageText.match(/imhere-[a-f0-9]+/);
-        
         if (tokenMatch) {
           const securityToken = tokenMatch[0];
-          
-          // Generate a safe, humanized typing delay buffer (7 to 14 seconds)
           const humanDelay = Math.floor(Math.random() * (14000 - 7000 + 1)) + 7000;
           
           console.log(`[NETWORK CAPTURE] Found verification token: ${securityToken}`);
-          console.log(`[SIMULATION] Delaying execution by ${humanDelay / 1000} seconds to mimic real player actions...`);
+          console.log(`[SIMULATION] Delaying execution by ${humanDelay / 1000} seconds...`);
           
           setTimeout(() => {
-            // Emulates clicking the message button and pressing Enter simultaneously
             bot.chat(securityToken);
-            console.log(`[VALIDATED] Token "${securityToken}" sent. Connection verified!`);
+            console.log(`[VALIDATED] Token "${securityToken}" sent.`);
           }, humanDelay);
         }
       }
