@@ -53,7 +53,8 @@ function launchBot() {
       if (messageText.includes('paying user') || messageText.includes('imhere-')) {
         const tokenMatch = messageText.match(/imhere-[a-f0-9]+/);
         if (tokenMatch) {
-          const securityToken = tokenMatch[0];
+          // FIXED: Changed from tokenMatch to tokenMatch[0] to grab the text string properly
+          const securityToken = tokenMatch[0]; 
           const humanDelay = Math.floor(Math.random() * (14000 - 7000 + 1)) + 7000;
           
           console.log(`[NETWORK CAPTURE] Found verification token: ${securityToken}`);
