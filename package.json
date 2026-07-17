@@ -1,13 +1,12 @@
 {
-  "name": "indernos-bot",
+  "name": "here-bot",
   "version": "1.0.0",
-  "description": "24/7 Indernos Bot Bypasser",
-  "main": "app.js",
+  "description": "",
+  "main": "index.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "mineflayer": "^4.20.0"
+    "mineflayer": "^4.24.0" 
   }
 }
