@@ -5,7 +5,7 @@ const express = require('express')
 // CONFIGURATION
 // ==========================================
 // Replace this with your preferred bot account password
-const BOT_PASSWORD = 'YourSuperSecretPasswordHere' 
+const BOT_PASSWORD = 'hahaha' 
 
 const botOptions = {
   host: 'delhi-5009.indernos.in', 
