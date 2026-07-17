@@ -2,6 +2,19 @@ const mineflayer = require('mineflayer')
 const express = require('express')
 
 // ==========================================
+// CONFIGURATION
+// ==========================================
+// Replace this with your preferred bot account password
+const BOT_PASSWORD = 'YourSuperSecretPasswordHere' 
+
+const botOptions = {
+  host: 'delhi-5009.indernos.in', 
+  port: 25565,                    
+  username: 'ImHereBot'
+  // Version is left out to let Mineflayer auto-negotiate the protocol
+}
+
+// ==========================================
 // EXPRESS WEB SERVER SETUP (For Render Keep-Alive)
 // ==========================================
 const app = express()
@@ -16,77 +29,114 @@ app.listen(PORT, '0.0.0.0', () => {
 })
 
 // ==========================================
-// MINEFLAYER BOT SETUP & RECONNECT LOOP
+// MINEFLAYER BOT SETUP & LOGIC
 // ==========================================
-const botOptions = {
-  host: 'delhi-5009.indernos.in', 
-  port: 25565,                    
-  username: 'ImHereBot',           
-  version: '26.1.2'               
-}
-
 let bot
-let chatInterval = null
+let chatTimeout = null
 let reconnectTimeout = null
 
 function createMinecraftBot() {
-  // Clear any existing chat loops before connecting to prevent duplicate spamming
-  if (chatInterval) {
-    clearInterval(chatInterval)
-    chatInterval = null
-  }
+  cleanupChatLoop()
 
   console.log('Connecting to Minecraft server...')
   bot = mineflayer.createBot(botOptions)
 
-  // When the bot successfully joins the world
-  bot.once('spawn', () => {
-    console.log(`${bot.username} has joined the server!`)
-    
-    // Send the first message immediately
-    bot.chat('im here')
+  // Intercept system/chat messages to manage authentication
+  bot.on('message', (jsonMsg) => {
+    const rawMessage = jsonMsg.toString().toLowerCase()
 
-    // Spam "im here" exactly every 30 seconds (30,000 ms)
-    chatInterval = setInterval(() => {
-      if (bot && bot.entity) {
-        bot.chat('im here')
-        console.log('Sent spam message: "im here"')
+    // 1. Handle Account Registration Request
+    if (rawMessage.includes('/register')) {
+      console.log('Auth Required: Registering account...')
+      bot.chat(`/register ${BOT_PASSWORD} ${BOT_PASSWORD}`)
+    } 
+    
+    // 2. Handle Account Login Request
+    else if (rawMessage.includes('/login')) {
+      console.log('Auth Required: Logging in...')
+      bot.chat(`/login ${BOT_PASSWORD}`)
+    }
+
+    // 3. Detect Successful Login Confirmation text
+    if (rawMessage.includes('successful') || rawMessage.includes('logged in') || rawMessage.includes('welcome')) {
+      if (!chatTimeout) {
+        console.log('Authentication confirmed! Starting spam loop...')
+        safeChat('im here')
+        startSpamLoop()
       }
-    }, 30000) 
+    }
   })
 
-  // Handle sudden kicks from the server or plugins
+  // Fallback trigger in case the server doesn't use standard auth success text strings
+  bot.once('spawn', () => {
+    console.log(`${bot.username} spawned into the world layer.`)
+    setTimeout(() => {
+      if (!chatTimeout && bot && bot.entity) {
+        console.log('Fallback active: Triggering spam loop post-spawn.')
+        safeChat('im here')
+        startSpamLoop()
+      }
+    }, 4000)
+  })
+
+  // Prevent getting stuck on the death menu screen
+  bot.on('death', () => {
+    console.log(`${bot.username} died! Respawning automatically...`)
+    bot.respawn()
+  })
+
   bot.on('kick', (reason) => {
     console.log(`Kicked from server: ${reason}`)
     handleReconnect()
   })
 
-  // Handle network, timeout, or protocol errors
   bot.on('error', (err) => {
-    console.error(`Mineflayer Error: ${err.message}`)
+    console.error(`Mineflayer Error encountered: ${err.message}`)
     if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
       handleReconnect()
     }
   })
 
-  // Triggered when the connection drops completely
   bot.on('end', () => {
-    console.log('Connection closed.')
+    console.log('Connection closed cleanly or dropped.')
     handleReconnect()
   })
 }
 
-// Manages clean reconnection attempts without overloading Node memory
-function handleReconnect() {
-  // Kill the active spam loop while disconnected
-  if (chatInterval) {
-    clearInterval(chatInterval)
-    chatInterval = null
+// Prevents bot from executing chat commands mid-crash or mid-disconnect
+function safeChat(message) {
+  if (bot && bot.entity) {
+    bot.chat(message)
+    console.log(`Sent chat: "${message}"`)
   }
+}
 
-  // If a reconnect isn't already scheduled, schedule one in 10 seconds
+// Uses recursive timeouts + slight randomized variance (jitter)
+// to simulate organic timing and bypass rigid anti-cheat filters.
+function startSpamLoop() {
+  cleanupChatLoop()
+
+  // Targets ~30 seconds, adds a random 0 to 3 seconds window variation
+  const nextDelay = 30000 + Math.floor(Math.random() * 3000)
+
+  chatTimeout = setTimeout(() => {
+    safeChat('im here')
+    startSpamLoop() 
+  }, nextDelay)
+}
+
+function cleanupChatLoop() {
+  if (chatTimeout) {
+    clearTimeout(chatTimeout)
+    chatTimeout = null
+  }
+}
+
+function handleReconnect() {
+  cleanupChatLoop()
+
   if (!reconnectTimeout) {
-    console.log('Attempting to reconnect in 10 seconds...')
+    console.log('Reconnecting in 10 seconds...')
     reconnectTimeout = setTimeout(() => {
       reconnectTimeout = null
       createMinecraftBot()
@@ -94,5 +144,5 @@ function handleReconnect() {
   }
 }
 
-// Initialize the first connection
+// Initial engine fire-up
 createMinecraftBot()
