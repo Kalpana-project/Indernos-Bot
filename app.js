@@ -1,86 +1,98 @@
-const mineflayer = require('mineflayer');
-const express = require('express');
+const mineflayer = require('mineflayer')
+const express = require('express')
 
-// 1. STABLE NETWORK PORT AND KEEP-ALIVE SYSTEM FOR RENDER
-const app = express();
-const port = process.env.PORT || 10000;
+// ==========================================
+// EXPRESS WEB SERVER SETUP (For Render Keep-Alive)
+// ==========================================
+const app = express()
+const PORT = process.env.PORT || 10000 
 
 app.get('/', (req, res) => {
-  res.send('Indernos Advanced Core Bypasser Active 24/7');
-});
+  res.send('Minecraft Bot is running on Indernos! 🤖')
+})
 
-app.listen(port, () => {
-  console.log(`Keep-Alive Web Gateway listening on port ${port}`);
-});
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Web server listening on port ${PORT}`)
+})
 
-// 2. CHAT AND NETWORK PACKET BINDING MATRIX
-function launchBot() {
-  // --- YOUR HARDCODED RAW SERVER DETAILS ---
-  const serverHost = 'delhi-5009.indernos.in';
-  const serverPort = 25565;
-  const botUsername = 'IndernosBot'; 
-  console.log(`[INIT] Launching bot "${botUsername}" targeting raw IP ${serverHost}:${serverPort}...`);
-
-  const bot = mineflayer.createBot({
-    host: serverHost, 
-    port: serverPort,                    
-    username: botUsername,   
-    auth: 'offline',
-    
-    // --- FORCE CODEBASE VIA PROTOCOL OVERRIDE ---
-    version: false, 
-    protocolVersion: 775, // Standard override for the modern protocol structure
-    
-    // --- RAM OPTIMIZATIONS FOR RENDER'S 512MB LIMIT ---
-    viewDistance: 'tiny', 
-    physicsEnabled: false 
-  });
-
-  // Disable physics/tracking entirely on spawn to prevent Out of Memory crashes
-  bot.on('spawn', () => {
-    console.log('[SPAWN] Bot entered world successfully. Network modules hooked.');
-    if (bot.physics) bot.physics.enabled = false;
-  });
-
-  // TARGETS SYSTEM PACKETS DIRECTLY TO CAPTURE CLICK ACTIONS
-  bot._client.on('systemChat', (packet) => {
-    try {
-      const rawJson = packet.content || packet.message;
-      if (!rawJson) return;
-
-      const messageText = JSON.stringify(rawJson).toLowerCase();
-
-      if (messageText.includes('paying user') || messageText.includes('imhere-')) {
-        const tokenMatch = messageText.match(/imhere-[a-f0-9]+/);
-        if (tokenMatch) {
-          // FIXED: Changed from tokenMatch to tokenMatch[0] to grab the text string properly
-          const securityToken = tokenMatch[0]; 
-          const humanDelay = Math.floor(Math.random() * (14000 - 7000 + 1)) + 7000;
-          
-          console.log(`[NETWORK CAPTURE] Found verification token: ${securityToken}`);
-          console.log(`[SIMULATION] Delaying execution by ${humanDelay / 1000} seconds...`);
-          
-          setTimeout(() => {
-            bot.chat(securityToken);
-            console.log(`[VALIDATED] Token "${securityToken}" sent.`);
-          }, humanDelay);
-        }
-      }
-    } catch (error) {
-      console.log(`[PACKET RECOVERY ERROR]: ${error.message}`);
-    }
-  });
-
-  // 3. PERSISTENT RECONNECTION ENGINE FOR NETWORK RESETS
-  bot.on('end', (reason) => {
-    console.log(`Connection dropped (${reason}). Rejoining server framework in 15 seconds...`);
-    setTimeout(launchBot, 15000);
-  });
-
-  bot.on('error', (err) => {
-    console.log(`Network Protocol Error Detected: ${err.message}`);
-  });
+// ==========================================
+// MINEFLAYER BOT SETUP & RECONNECT LOOP
+// ==========================================
+const botOptions = {
+  host: 'delhi-5009.indernos.in', 
+  port: 25565,                    
+  username: 'ImHereBot',           
+  version: '26.1.2'               
 }
 
-// Fire initial activation loop
-launchBot();
+let bot
+let chatInterval = null
+let reconnectTimeout = null
+
+function createMinecraftBot() {
+  // Clear any existing chat loops before connecting to prevent duplicate spamming
+  if (chatInterval) {
+    clearInterval(chatInterval)
+    chatInterval = null
+  }
+
+  console.log('Connecting to Minecraft server...')
+  bot = mineflayer.createBot(botOptions)
+
+  // When the bot successfully joins the world
+  bot.once('spawn', () => {
+    console.log(`${bot.username} has joined the server!`)
+    
+    // Send the first message immediately
+    bot.chat('im here')
+
+    // Spam "im here" exactly every 30 seconds (30,000 ms)
+    chatInterval = setInterval(() => {
+      if (bot && bot.entity) {
+        bot.chat('im here')
+        console.log('Sent spam message: "im here"')
+      }
+    }, 30000) 
+  })
+
+  // Handle sudden kicks from the server or plugins
+  bot.on('kick', (reason) => {
+    console.log(`Kicked from server: ${reason}`)
+    handleReconnect()
+  })
+
+  // Handle network, timeout, or protocol errors
+  bot.on('error', (err) => {
+    console.error(`Mineflayer Error: ${err.message}`)
+    if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+      handleReconnect()
+    }
+  })
+
+  // Triggered when the connection drops completely
+  bot.on('end', () => {
+    console.log('Connection closed.')
+    handleReconnect()
+  })
+}
+
+// Manages clean reconnection attempts without overloading Node memory
+function handleReconnect() {
+  // Kill the active spam loop while disconnected
+  if (chatInterval) {
+    clearInterval(chatInterval)
+    chatInterval = null
+  }
+
+  // If a reconnect isn't already scheduled, schedule one in 10 seconds
+  if (!reconnectTimeout) {
+    console.log('Attempting to reconnect in 10 seconds...')
+    reconnectTimeout = setTimeout(() => {
+      reconnectTimeout = null
+      createMinecraftBot()
+    }, 10000)
+  }
+}
+
+// Initialize the first connection
+createMinecraftBot()
